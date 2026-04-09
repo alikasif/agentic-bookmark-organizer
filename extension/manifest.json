@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "AI Bookmark Organizer",
+  "version": "1.0.0",
+  "description": "Intelligently organize your bookmarks using Claude AI",
+  "permissions": ["bookmarks", "storage"],
+  "host_permissions": ["http://localhost:8765/*"],
+  "background": {
+    "service_worker": "dist/service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "dist/popup.html",
+    "default_title": "AI Bookmark Organizer"
+  }
+}

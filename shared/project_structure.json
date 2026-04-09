@@ -1,0 +1,22 @@
+{
+  "project_name": "bookmarks_organizer",
+  "root": "d:/GitHub/bookmarks-organizer/",
+  "modules": {
+    "backend": "backend/",
+    "frontend": "extension/",
+    "tests": "backend/tests/",
+    "docs": "docs/",
+    "shared": "shared/"
+  },
+  "config_files": [".gitignore", "README.md"],
+  "tech_stack": {
+    "backend": "Python 3.12 / FastAPI / httpx / BeautifulSoup4 / anthropic",
+    "frontend": "TypeScript / Manifest V3 / webpack",
+    "ai_model": "claude-3-5-haiku-20241022",
+    "package_manager_python": "uv",
+    "package_manager_js": "npm"
+  },
+  "git": {
+    "branch": "feat/ai-bookmark-organizer"
+  }
+}

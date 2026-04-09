@@ -1,0 +1,432 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Bookmark Organizer API",
+    "description": "AI-powered bookmark organization backend",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Return service health status.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organize": {
+      "post": {
+        "summary": "Organize Bookmarks",
+        "description": "Analyze and propose organization for bookmarks.",
+        "operationId": "organize_bookmarks_organize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/content/fetch": {
+      "post": {
+        "summary": "Fetch Content",
+        "description": "Fetch metadata content from a list of URLs.",
+        "operationId": "fetch_content_content_fetch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentFetchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentFetchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BookmarkItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "depth": {
+            "type": "integer",
+            "title": "Depth"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "depth"
+        ],
+        "title": "BookmarkItem",
+        "description": "A single bookmark item."
+      },
+      "BookmarkOperation": {
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "create_folder",
+              "move",
+              "rename"
+            ],
+            "title": "Op"
+          },
+          "bookmark_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bookmark Id"
+          },
+          "folder_path": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Folder Path"
+          },
+          "new_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "op",
+          "folder_path"
+        ],
+        "title": "BookmarkOperation",
+        "description": "A single bookmark operation to perform."
+      },
+      "ContentFetchRequest": {
+        "properties": {
+          "urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Urls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "urls"
+        ],
+        "title": "ContentFetchRequest",
+        "description": "Request to fetch content for URLs."
+      },
+      "ContentFetchResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/FetchedContent"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "title": "ContentFetchResponse",
+        "description": "Response from the content fetch endpoint."
+      },
+      "FetchedContent": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "body_text": {
+            "type": "string",
+            "title": "Body Text",
+            "default": ""
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "success"
+        ],
+        "title": "FetchedContent",
+        "description": "Content fetched from a URL."
+      },
+      "FolderNode": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/FolderNode"
+            },
+            "type": "array",
+            "title": "Children",
+            "default": []
+          },
+          "bookmark_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Bookmark Ids",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "FolderNode",
+        "description": "A node in the proposed folder tree."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "OrganizeRequest": {
+        "properties": {
+          "bookmarks": {
+            "items": {
+              "$ref": "#/components/schemas/BookmarkItem"
+            },
+            "type": "array",
+            "maxItems": 5000,
+            "title": "Bookmarks"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "default": true
+          },
+          "max_folders": {
+            "type": "integer",
+            "title": "Max Folders",
+            "default": 20
+          }
+        },
+        "type": "object",
+        "required": [
+          "bookmarks"
+        ],
+        "title": "OrganizeRequest",
+        "description": "Request to organize bookmarks."
+      },
+      "OrganizeResponse": {
+        "properties": {
+          "proposed_structure": {
+            "$ref": "#/components/schemas/FolderNode"
+          },
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/BookmarkOperation"
+            },
+            "type": "array",
+            "title": "Operations"
+          },
+          "stats": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Stats"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposed_structure",
+          "operations",
+          "stats",
+          "warnings"
+        ],
+        "title": "OrganizeResponse",
+        "description": "Response from the organize endpoint."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

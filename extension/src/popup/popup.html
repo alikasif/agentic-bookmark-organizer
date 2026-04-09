@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Bookmark Organizer</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Bookmark Organizer</h1>
+        <div id="backend-status" class="status-chip status-unknown">
+          Checking backend...
+        </div>
+      </header>
+
+      <main id="main-content">
+        <!-- State: idle -->
+        <div id="state-idle" class="state">
+          <p class="description">
+            Organize your bookmarks intelligently using Claude AI.
+          </p>
+          <label class="toggle-label">
+            <input type="checkbox" id="dry-run-toggle" checked />
+            Preview before applying
+          </label>
+          <button id="btn-organize" class="btn btn-primary" disabled>
+            Organize Bookmarks
+          </button>
+        </div>
+
+        <!-- State: fetching -->
+        <div id="state-fetching" class="state hidden">
+          <p>Fetching bookmark content...</p>
+          <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+          <span id="progress-count" class="progress-text">0 / 0</span>
+        </div>
+
+        <!-- State: analyzing -->
+        <div id="state-analyzing" class="state hidden">
+          <div class="spinner"></div>
+          <p>Analyzing with Claude AI...</p>
+        </div>
+
+        <!-- State: preview -->
+        <div id="state-preview" class="state hidden">
+          <p class="preview-title">Proposed Structure</p>
+          <div id="folder-tree" class="folder-tree"></div>
+          <div class="preview-stats">
+            <span id="preview-stats-text"></span>
+          </div>
+          <div class="button-row">
+            <button id="btn-apply" class="btn btn-primary">Apply</button>
+            <button id="btn-cancel" class="btn btn-secondary">Cancel</button>
+          </div>
+        </div>
+
+        <!-- State: applying -->
+        <div id="state-applying" class="state hidden">
+          <p>Applying changes...</p>
+          <div class="spinner"></div>
+        </div>
+
+        <!-- State: done -->
+        <div id="state-done" class="state hidden">
+          <div class="done-icon">&#10003;</div>
+          <p class="done-title">Done!</p>
+          <div id="done-stats" class="done-stats"></div>
+          <button id="btn-restart" class="btn btn-secondary">
+            Organize Again
+          </button>
+        </div>
+
+        <!-- State: error -->
+        <div id="state-error" class="state hidden">
+          <div class="error-icon">&#10007;</div>
+          <p id="error-message" class="error-message"></p>
+          <p class="error-hint">
+            Ensure the backend is running:<br />
+            <code>uv run python -m bookmarks_organizer.main</code>
+          </p>
+          <button id="btn-retry" class="btn btn-secondary">Retry</button>
+        </div>
+      </main>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

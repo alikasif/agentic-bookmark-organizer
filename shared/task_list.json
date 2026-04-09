@@ -1,0 +1,113 @@
+[
+  {
+    "id": 1,
+    "title": "Initialize project scaffold",
+    "assigned_to": "project_structure",
+    "status": "done",
+    "blocked_by": [],
+    "description": "Create all directories, .gitignore, README.md stub, project_structure.json. Create and checkout branch feat/ai-bookmark-organizer. Push initial chore commit."
+  },
+  {
+    "id": 2,
+    "title": "Backend: config, models, protocols",
+    "assigned_to": "python_coder",
+    "status": "not_started",
+    "blocked_by": [1],
+    "description": "Initialize backend/pyproject.toml with uv (Python 3.12). Add deps: fastapi, uvicorn, httpx, beautifulsoup4, lxml, anthropic, pydantic-settings. Write config.py (Settings with pydantic-settings), models/requests.py, models/responses.py, services/protocols.py. Run pyrefly check. No endpoints yet."
+  },
+  {
+    "id": 3,
+    "title": "Backend: ContentFetcher service",
+    "assigned_to": "python_coder",
+    "status": "not_started",
+    "blocked_by": [2],
+    "description": "Implement services/content_fetcher.py implementing ContentFetcherProtocol. Use httpx.AsyncClient with asyncio.Semaphore(fetch_concurrency) for rate limiting. Use BeautifulSoup4 (lxml) to extract title, meta description, first 500 chars of body text. Gracefully handle: timeouts, non-HTML, connection errors (return FetchedContent with success=False). Run ruff + pyrefly."
+  },
+  {
+    "id": 4,
+    "title": "Backend: AIOrganizer service",
+    "assigned_to": "python_coder",
+    "status": "not_started",
+    "blocked_by": [2],
+    "description": "Implement services/ai_organizer.py implementing AIOrganizerProtocol. Use anthropic.AsyncAnthropic. Batch bookmarks into chunks of ai_batch_size. System prompt instructs Claude to return JSON matching OrganizeProposal schema. Validate response with Pydantic, retry up to 3x on malformed JSON with corrective prompt. AI model: claude-3-5-haiku-20241022. Run ruff + pyrefly."
+  },
+  {
+    "id": 5,
+    "title": "Backend: BookmarkBuilder + FastAPI routes + main.py",
+    "assigned_to": "python_coder",
+    "status": "not_started",
+    "blocked_by": [3, 4],
+    "description": "Implement services/bookmark_builder.py (converts OrganizeProposal to flat list of BookmarkOperation). Implement api/routes/health.py (GET /health), api/routes/bookmarks.py (POST /organize with dry_run support), api/routes/content.py (POST /content/fetch). Implement main.py: FastAPI app with CORSMiddleware (allow_origin_regex=chrome-extension://.*), include all routers, uvicorn startup. Export openapi.json to shared/api/openapi.json. Run ruff + pyrefly."
+  },
+  {
+    "id": 6,
+    "title": "Backend tests",
+    "assigned_to": "python_test",
+    "status": "not_started",
+    "blocked_by": [5],
+    "description": "Write backend/tests/conftest.py (anyio_mode=asyncio, fixtures for mock services). Write test_health.py (httpx.AsyncClient, assert 200). test_content_fetcher.py (use respx to mock httpx, test success/timeout/non-HTML/error paths). test_ai_organizer.py (mock anthropic client, test valid response, malformed JSON retry, batching). test_bookmark_builder.py (unit tests for topological ordering of operations). test_bookmarks_api.py (integration: mock services via DI, test dry_run=True/False, 422, 500). Run uv run pytest --cov. All must pass."
+  },
+  {
+    "id": 7,
+    "title": "Backend code review",
+    "assigned_to": "backend_reviewer",
+    "status": "done",
+    "blocked_by": [6],
+    "description": "Review all backend Python code for SOLID compliance, type hint completeness (all functions), error handling coverage, security (no hardcoded secrets, no injection risks), API design quality. Verify ruff + pyrefly pass. Flag CRITICAL/MAJOR/MINOR issues.",
+    "severity": "MAJOR",
+    "reviewer": "backend_reviewer",
+    "review_comments": "NEEDS_CHANGES -- 6 MAJOR issues, 3 MINOR issues found.\n\n[MAJOR] api/routes/bookmarks.py:25-27 -- Services (ContentFetcher, AIOrganizer, BookmarkBuilder) are instantiated directly inside the route handler instead of being injected via FastAPI Depends(). This couples the route to concrete implementations and defeats the purpose of the protocols defined in protocols.py. Fix: Create Depends() factory functions typed to ContentFetcherProtocol/AIOrganizerProtocol and inject them as handler parameters.\n\n[MAJOR] api/routes/content.py:19 -- Same DI issue as above: ContentFetcher instantiated directly. Also, this endpoint has NO error handling -- any exception from fetch_batch will result in a raw 500 with stack trace details leaked to the client. Fix: Add try/except with HTTPException like bookmarks.py does, and use DI for the service.\n\n[MAJOR] models/requests.py:25 (ContentFetchRequest.urls) -- No size limit on the urls list. A client could send thousands of URLs causing resource exhaustion. Fix: Add Field(max_length=200) or similar constraint.\n\n[MAJOR] models/requests.py:19 (OrganizeRequest.bookmarks) -- Same unbounded list issue. Fix: Add a reasonable max_length constraint.\n\n[MAJOR] services/ai_organizer.py:93-94 -- Logic bug: max_folders from the OrganizeRequest is never passed to the AI prompt. Line 94 replaces {max_folders} with self._settings.ai_batch_size (50) instead of the actual max_folders value. The organize() method signature has no max_folders parameter. Fix: Add max_folders parameter to organize() and pass it through to _organize_chunk for prompt substitution.\n\n[MAJOR] config.py:21-23 -- get_settings() creates a new Settings instance on every call (re-reading .env each time). Docstring says 'singleton' but it is not. Fix: Add @lru_cache decorator or use a module-level cached instance.\n\n[MINOR] services/ai_organizer.py:37-39 -- SYSTEM_PROMPT uses {max_folders} single braces alongside {{ double-brace JSON escaping. While .replace() works, this is fragile. Consider using a distinct placeholder like __MAX_FOLDERS__.\n\n[MINOR] main.py:46 -- pathlib.Path(__file__).parents[5] is fragile and depends on exact directory depth. Consider searching upward for .git or shared/ directory.\n\n[MINOR] services/content_fetcher.py:37 -- No URL scheme validation before making HTTP requests. URLs like file:// or internal IPs could be passed (SSRF defense-in-depth). Consider restricting to http/https schemes.\n\nSECURITY: No hardcoded secrets. CORS config appropriate. Exception detail in bookmarks.py:41 str(exc) could leak internals -- use a generic message.\n\nPOSITIVE: Protocol-first design is solid. ContentFetcher error handling is thorough. AI retry logic with corrective prompts is well-implemented. Topological folder sort is correct. Clean layered package structure. Complete type hints and docstrings on all public APIs.",
+    "resolution": "All 6 MAJOR and 3 MINOR issues addressed: DI via Depends(), OrganizationService extracted, BookmarkBuilderProtocol added, lru_cache on get_settings, max_folders passed to AI prompt, request bounds added, SSRF validation, error detail hidden, content.py error handling, fragile path fixed, __MAX_FOLDERS__ placeholder."
+  },
+  {
+    "id": 8,
+    "title": "Architecture review",
+    "assigned_to": "architecture_reviewer",
+    "status": "done",
+    "blocked_by": [5],
+    "description": "Review module boundaries (domain never imports infra), dependency direction (protocols in services/, implementations depend on protocols not vice versa), interface-first design verified, no circular imports. Check SOLID adherence.",
+    "review_feedback": "NEEDS_RESTRUCTURING: (1) api/routes/bookmarks.py and content.py directly import and instantiate concrete service classes instead of depending on protocols via DI -- create FastAPI Depends() functions typed to ContentFetcherProtocol/AIOrganizerProtocol. (2) organize_bookmarks route handler contains orchestration logic (fetch->enrich->organize->build) that belongs in a service layer -- extract to a service function. (3) ContentFetcher and AIOrganizer accept full Settings object instead of specific config values -- decouple by accepting only needed params. (4) BookmarkBuilder has no protocol in protocols.py -- add BookmarkBuilderProtocol.",
+    "resolution": "All 4 issues addressed: (1) DI via api/dependencies.py with Depends() typed to protocols, (2) OrganizationService extracted to services/organization_service.py, (3) Services accept only needed config values, (4) BookmarkBuilderProtocol added to protocols.py."
+  },
+  {
+    "id": 9,
+    "title": "Extension: scaffold, types, backend-client, bookmark-reader",
+    "assigned_to": "python_coder",
+    "status": "not_started",
+    "blocked_by": [5],
+    "description": "NOTE: This is TypeScript/JavaScript work despite agent name. Create extension/manifest.json (MV3: permissions=[bookmarks,storage], host_permissions=[http://localhost:8765/*], background service_worker=dist/service-worker.js, action popup=popup.html). Create package.json (typescript, webpack, webpack-cli, @types/chrome as devDeps). Create tsconfig.json (strict mode, ES2022 target). Create webpack.config.js (entries: background/service-worker, popup/popup; output to dist/). Create src/types/api.ts with TypeScript interfaces matching the backend Pydantic models (BookmarkItem, OrganizeRequest, OrganizeResponse, BookmarkOperation, FolderNode). Create src/background/backend-client.ts: class BackendClient with methods: checkHealth(), organize(bookmarks, dryRun, maxFolders), fetchContent(urls). All methods use fetch() to localhost:8765 with proper error handling."
+  },
+  {
+    "id": 10,
+    "title": "Extension: bookmark-reader, bookmark-writer, progress-tracker, service-worker",
+    "assigned_to": "python_coder",
+    "status": "not_started",
+    "blocked_by": [9],
+    "description": "NOTE: TypeScript work. Create src/background/bookmark-reader.ts: calls chrome.bookmarks.getTree(), flattens BookmarkTreeNode[] to BookmarkItem[] (skip synthetic root nodes, include folder nodes with url=undefined). Create src/background/bookmark-writer.ts: takes BookmarkOperation[], creates folders topologically (parents before children using folder_path, cache created folder IDs), then moves/renames bookmarks using chrome.bookmarks.create/move/update. Create src/background/progress-tracker.ts: persists JobState {status, progress, total, errors} to chrome.storage.local. Create src/background/service-worker.ts: listens for chrome.runtime.onMessage (type=START_ORGANIZE|CANCEL), orchestrates: bookmark-reader -> backend-client.organize(dryRun=true) -> sends PREVIEW message to popup -> waits for CONFIRM -> backend-client.organize(dryRun=false) OR applies locally -> bookmark-writer -> sends DONE. Updates progress-tracker throughout. Run npm run build."
+  },
+  {
+    "id": 11,
+    "title": "Extension: popup UI",
+    "assigned_to": "python_coder",
+    "status": "not_started",
+    "blocked_by": [10],
+    "description": "NOTE: TypeScript/HTML/CSS work. Create src/popup/popup.html: 300x400px popup with status indicator, main content area, buttons. Create src/popup/popup.css: clean minimal styling, folder tree styles for preview. Create src/popup/popup.ts: implement 7-state UI machine: (1)idle: Organize button + dry-run toggle + backend status chip; (2)fetching: progress bar + count; (3)analyzing: spinner + AI message; (4)preview: collapsible folder tree showing proposed_structure, bookmark count per folder, Apply/Cancel buttons; (5)applying: progress; (6)done: stats summary (bookmarks organized, folders created); (7)error: error message + 'Ensure backend is running: uv run python -m bookmarks_organizer.main'. Communicates with service-worker via chrome.runtime.sendMessage. Polls backend health on open. Run npm run build."
+  },
+  {
+    "id": 12,
+    "title": "Documentation",
+    "assigned_to": "documentation",
+    "status": "done",
+    "output": ["README.md", "docs/architecture.md"],
+    "blocked_by": [5],
+    "description": "Write README.md at repo root: project description, prerequisites (Python 3.12, uv, Node.js, Edge), backend setup (uv install, .env config, start command), extension setup (npm install, npm run build, load in Edge developer mode), usage instructions. Write docs/architecture.md: component diagram (ASCII), data flow description, API contract reference, key design decisions."
+  },
+  {
+    "id": 13,
+    "title": "Git push and open draft PR",
+    "assigned_to": "github",
+    "status": "not_started",
+    "blocked_by": [7, 8, 11, 12],
+    "description": "Push branch feat/ai-bookmark-organizer to remote. Open draft PR to main with title 'feat: AI-powered Edge bookmark organizer' and description summarizing: what it does, architecture (Extension + Python backend), how to run, Claude model used."
+  }
+]
